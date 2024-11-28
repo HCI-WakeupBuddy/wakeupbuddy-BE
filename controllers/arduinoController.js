@@ -7,7 +7,7 @@ const SerialPort = require('serialport');
 
 // Arduino 보드 초기화
 const board = new Board({
-  port: new SerialPort('/dev/ttyACM0') // Arduino가 연결된 포트 경로를 적절히 수정
+  port: new SerialPort({ path: '/dev/ttyACM0', baudRate: 9600 }) // 경로를 적절히 수정하세요
 });
 
 let vibrationMotor;
@@ -30,23 +30,26 @@ const triggerVibration = (req, res) => {
   }
 
   // 진동 세기 설정 by pwmWrite(dutyCycle)
-  let dutyCycle;
+  let pwmValue;
   switch (intensity) {
     case '약':
-      dutyCycle = 50; // 약한 진동 (50% 세기)
+      pwmValue = 50; // 약한 진동 (50% 세기)
       break;
     case '중':
-      dutyCycle = 150; // 중간 진동 (150 PWM 값)
+      pwmValue = 150; // 중간 진동 (150 PWM 값)
       break;
     case '강':
-      dutyCycle = 255; // 강한 진동 (최대 세기)
+      pwmValue = 255; // 강한 진동 (최대 세기)
       break;
     default:
       return res.status(400).json({ message: '잘못된 진동 강도 값입니다.' });
   }
 
   // PWM 값을 설정하여 진동 모듈 제어
-  vibrationMotor.pwmWrite(dutyCycle);
+  vibrationMotor.pwmWrite(pwmValue);
+  setTimeout(() => {
+    vibrationMotor.low(); // 진동 멈춤
+  }, 1000); // 1초 동안 진동 후 멈춤
 
   res.status(200).json({ message: `진동 모듈이 ${intensity} 강도로 작동하였습니다.` });
 };

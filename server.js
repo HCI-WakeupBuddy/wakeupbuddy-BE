@@ -2,9 +2,13 @@
 
 // 기본 서버 설정 및 미들웨어 추가
 const express = require('express');
+const path = require('path');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const bodyParser = require('body-parser');
+const museRoutes = require('./routes/museRoutes');
+const eegRoutes = require('./routes/eegRoutes');
+const arduinoRoutes = require('./routes/arduinoRoutes');
 const { Board, Led } = require('johnny-five');
 const SerialPort = require('serialport');
 const multer = require('multer')
@@ -78,6 +82,17 @@ app.post('/api/end-session', (req, res) => {
     startTime = null; // 학습 세션 종료 시 초기화
   
     res.status(200).json({ message: '학습 세션이 종료되었습니다.', report });
+});
+
+// 그래프 파일 제공 API
+app.get('/api/graph', (req, res) => {
+  const graphPath = path.join(__dirname, 'drowsiness_detection_result.png');
+  res.sendFile(graphPath, (err) => {
+    if (err) {
+      console.error('Error sending graph file:', err);
+      res.status(500).send('Error sending graph file');
+    }
+  });
 });
 
 // 서버 시작

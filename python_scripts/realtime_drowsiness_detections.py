@@ -14,6 +14,16 @@ import time
 import pandas as pd
 import matplotlib.pyplot as plt
 import logging
+import serial  # 아두이노 시리얼 통신을 위한 모듈
+
+# Arduino 시리얼 포트 연결 설정
+arduino_port = "/dev/ttyACM0"  # Linux 또는 macOS: /dev/ttyACM0, Windows: COM3 등
+baud_rate = 9600
+try:
+    ser = serial.Serial(arduino_port, baud_rate, timeout=1)
+    print("Arduino와 시리얼 포트 연결 성공")
+except Exception as e:
+    print(f"Arduino 시리얼 포트 연결 실패: {e}")
 
 def resolve_stream_with_timeout(prop, value, timeout=10):
     """Timeout을 적용한 resolve_stream"""
@@ -92,31 +102,21 @@ def extract_features(data):
 
     return theta_alpha_ratio.mean(), theta_beta_ratio.mean()
 
+# 졸음 감지 시 Arduino로 신호 전송 함수 추가
+def send_vibration_command(intensity):
+    if ser.is_open:
+        if intensity == '강':
+            ser.write(b'1')  # 강한 진동 명령
+        elif intensity == '중':
+            ser.write(b'2')  # 중간 진동 명령
+        elif intensity == '약':
+            ser.write(b'3')  # 약한 진동 명령
+        else:
+            print("알 수 없는 강도 수준")
+    else:
+        print("시리얼 포트가 열려 있지 않습니다.")
+
 # EEG 데이터 수집 함수
-# def collect_eeg_data(duration, sampling_rate=256):
-#     try:
-#         print("Resolving EEG stream...")
-#         streams = resolve_stream('type', 'EEG')
-#         if not streams:
-#             raise RuntimeError("No EEG streams found. Please ensure Muse is streaming.")
-#         inlet = StreamInlet(streams[0])
-
-#         print("EEG stream resolved. Collecting data...")
-#         data_buffer = []
-#         start_time = time.time()
-#         while time.time() - start_time < duration:
-#             eeg_data, _ = inlet.pull_sample(timeout=1.0)
-#             if eeg_data:
-#                 data_buffer.append(eeg_data[:4])
-#             else:
-#                 print("No data received during this cycle.")
-#             time.sleep(1 / sampling_rate)
-
-#         return np.array(data_buffer)
-#     except Exception as e:
-#         print(f"Error during data collection: {e}")
-#         return None
-
 def collect_eeg_data(duration, sampling_rate=256):
     print("Resolving EEG stream...")
     try:
@@ -169,6 +169,10 @@ def real_time_drowsiness_detection(thresholds, duration_minutes, sampling_rate=2
         if theta_alpha > theta_alpha_threshold or theta_beta > theta_beta_threshold:
             print(f"졸음이 감지되었습니다! 시간: {timestamp}")
             drowsy_events.append({"Timestamp": timestamp, "Theta/Alpha": theta_alpha, "Theta/Beta": theta_beta})
+             
+            # 졸음 감지 시 진동 모듈 신호 전송
+            send_vibration_command(vibration_intensity)  # 강한 진동으로 설정 (필요시 '중' 또는 '약'으로 변경 가능)
+
         else:
             print(f"Awake at {timestamp}. Theta/Alpha: {theta_alpha:.2f}, Theta/Beta: {theta_beta:.2f}")
             awake_events.append({"Timestamp": timestamp, "Theta/Alpha": theta_alpha, "Theta/Beta": theta_beta})
@@ -214,7 +218,13 @@ def visualize_results(drowsy_events, awake_events):
     plt.title("Real-Time Drowsiness Detection")
     plt.legend()
     plt.tight_layout()
-    plt.show()
+    
+    # 그래프를 이미지 파일로 저장
+    image_path = "drowsiness_detection_result.png"
+    plt.savefig(image_path)
+    plt.close()
+    print(f"Graph saved as '{image_path}'")
+
 
 def main():
 
