@@ -8,12 +8,15 @@ import pandas as pd
 import json
 import matplotlib.pyplot as plt
 from muselsl import list_muses
-from pylsl import StreamInlet, resolve_stream
+from pylsl import StreamInlet, resolve_stream, resolve_byprop
 from scipy.signal import butter, filtfilt, detrend
 from mne.preprocessing import ICA
 from mne import create_info, EpochsArray
+from mne.time_frequency import psd_array_multitaper
 import threading
 import subprocess
+import logging
+import serial  # 추가: 아두이노 시리얼 통신을 위한 모듈
 
 
 # 이벤트 객체 생성 (스레드 종료 신호)
@@ -138,6 +141,7 @@ def real_time_drowsiness_detection(thresholds, duration_minutes, sampling_rate=2
 
     total_time = time.time() - start_time  # 총 학습 시간 (초)
     total_drowsy_time = vibration_count * 5  # 진동 횟수 당 5초로 가정
+    total_awake_time = total_time - total_drowsy_time  # 집중한 시간
 
     save_and_visualize(drowsy_events, awake_events)
 
@@ -145,7 +149,9 @@ def real_time_drowsiness_detection(thresholds, duration_minutes, sampling_rate=2
     result = {
         "totalVibrationCount": vibration_count,
         "totalDrowsyTime": total_drowsy_time,
-        "totalTime": total_time
+        "totalTime": total_time,
+        "totalAwakeTime": total_awake_time,
+        "graphImageFilename": "drowsiness_detection_plot.png"  # 저장된 그래프 이미지 파일 이름
     }
     print(json.dumps(result))
 

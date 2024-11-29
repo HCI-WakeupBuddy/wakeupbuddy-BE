@@ -1,3 +1,5 @@
+#check_muse_status.py
+
 from muselsl import list_muses
 
 def check_muse_status():
