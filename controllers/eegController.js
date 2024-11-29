@@ -53,7 +53,7 @@ const startSession = (req, res) => {
         const parsedResult = JSON.parse(jsonString);
         sessionResult = {
           ...parsedResult,
-          graphImageUrl: `/images/${parsedResult.graphImageFilename}`,
+          graphImageUrl:  `/${parsedResult.graphImageFilename}`,
         };
         console.log("Python 결과를 성공적으로 파싱했습니다:", sessionResult);
         resultData = "";
