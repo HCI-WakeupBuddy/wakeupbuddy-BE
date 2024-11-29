@@ -23,7 +23,9 @@ const startSession = (req, res) => {
   const mappedIntensity = intensityMapping[intensity];
 
   if (!duration || !intensity) {
-    return res.status(400).json({ error: "Duration and intensity are required" });
+    return res
+      .status(400)
+      .json({ error: "Duration and intensity are required" });
   }
 
   startTime = new Date();
@@ -40,9 +42,7 @@ const startSession = (req, res) => {
     mappedIntensity,
   ]);
 
-   // 바로 응답을 반환
-   res.status(200).json({ message: "Session started successfully." });
-
+  res.status(200).json({ message: "Session started successfully." });
 
 
   let resultData = "";
@@ -63,6 +63,7 @@ const startSession = (req, res) => {
           totalDrowsyTime: parsedResult.totalDrowsyTime,
           totalTime: parsedResult.totalTime,
           totalAwakeTime: parsedResult.totalAwakeTime,
+
           graphImageUrl:  `/api/results/${parsedResult.graphImageFilename}`,
           jsonFileUrl: `${parsedResult.jsonFilename}` // JSON 파일 URL 추가
         };
@@ -88,7 +89,7 @@ const startSession = (req, res) => {
       sessionStatus = "error";
       sessionResult = { error: "Python script failed to execute." };
       return;
-    } 
+    }
     // Python이 정상적으로 종료된 경우
     if (sessionResult) {
       console.log("Python 프로세스에서 결과가 성공적으로 처리되었습니다.");
@@ -98,27 +99,33 @@ const startSession = (req, res) => {
       sessionStatus = "error";
       sessionResult = { error: "Result JSON file is missing." };
     }
-    
   });
-
 };
 
 // 학습 결과 가져오기 API
 const getSessionResult = (req, res) => {
   if (sessionStatus === "running") {
+    // 세션이 아직 진행 중일 경우
     return res.status(202).json({ message: "세션이 아직 진행 중입니다." });
   }
 
   if (sessionStatus === "error") {
-    return res.status(500).json({ error: "Python 스크립트 실행 중 오류가 발생했습니다." });
+    // 세션에서 에러가 발생한 경우
+    return res.status(500).json({
+      error: "Python 스크립트 실행 중 오류가 발생했습니다.",
+      details: sessionResult?.error || "알 수 없는 오류입니다.",
+    });
   }
 
   if (sessionStatus === "completed" && sessionResult) {
+    // 세션이 완료되었고 결과가 있는 경우
     return res.status(200).json(sessionResult);
   }
 
+  // 그 외의 경우
   res.status(404).json({
-    message: "학습 결과를 사용할 수 없습니다. 세션이 진행되지 않았거나 완료되지 않았습니다.",
+    message:
+      "학습 결과를 사용할 수 없습니다. 세션이 진행되지 않았거나 완료되지 않았습니다.",
   });
 };
 
