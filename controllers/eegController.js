@@ -40,6 +40,11 @@ const startSession = (req, res) => {
     mappedIntensity,
   ]);
 
+   // 바로 응답을 반환
+   res.status(200).json({ message: "Session started successfully." });
+
+
+
   let resultData = "";
 
   pythonProcess.stdout.on("data", (data) => {
@@ -58,8 +63,8 @@ const startSession = (req, res) => {
           totalDrowsyTime: parsedResult.totalDrowsyTime,
           totalTime: parsedResult.totalTime,
           totalAwakeTime: parsedResult.totalAwakeTime,
-          graphImageUrl:  `/${parsedResult.graphImageFilename}`,
-          jsonFileUrl: `/${parsedResult.jsonFilename}` // JSON 파일 URL 추가
+          graphImageUrl:  `/api/results/${parsedResult.graphImageFilename}`,
+          jsonFileUrl: `${parsedResult.jsonFilename}` // JSON 파일 URL 추가
         };
         console.log("Python 결과를 성공적으로 파싱했습니다:", sessionResult);
         resultData = "";

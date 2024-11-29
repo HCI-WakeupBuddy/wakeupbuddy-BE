@@ -174,7 +174,7 @@ def real_time_drowsiness_detection(thresholds, duration_minutes, sampling_rate=2
         "jsonFilename": json_filename
     }
     print(json.dumps(result))
-    
+
     # JSON 파일 저장 직전 로그 추가
     logging.info(f"Saving JSON file to: {json_path}")
     logging.info(f"Detection result: {json.dumps(result)}")  # 로그 파일에 기록
@@ -224,7 +224,7 @@ def visualize_results(drowsy_events, awake_events):
     plt.legend()
     plt.tight_layout()
 
-    image_filename = "drowsiness_detection_plot.png"
+    image_filename = os.path.join("results", "drowsiness_detection_plot.png")
     plt.savefig(image_filename)
     logging.info(f"Graph saved to '{image_filename}'.")
     plt.show()

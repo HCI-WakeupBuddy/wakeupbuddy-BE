@@ -31,6 +31,8 @@ app.use('/api/eeg', eegRoutes);
 
 // 그래프 파일 제공을 위한 정적 경로 설정
 app.use('/', express.static(path.join(__dirname)));
+app.use('/api/results', express.static(path.join(__dirname, 'results')));
+
 
 // 서버 시작
 const PORT = process.env.PORT || 3000;
