@@ -9,6 +9,14 @@ let sessionResult = null;
 // 학습 세션 시작 API
 const startSession = (req, res) => {
   const { duration, intensity } = req.body;
+  
+  // 진동 강도 매핑
+  const intensityMapping = {
+    "level 1": 50,
+    "level 2": 150,
+    "level 3": 255
+  };
+  const mappedIntensity = intensityMapping[intensity]; // 진동 강도를 숫자로 변환
 
   // 학습 시간과 진동 강도 유효성 검사
   if (!duration || !intensity) {
@@ -23,7 +31,7 @@ const startSession = (req, res) => {
   console.log(`학습 세션 시작 - 시간: ${duration}분, 진동 강도: ${intensity}`);
 
   // detect_eeg.py 파일 실행 및 학습 시간과 진동 강도 전달
-  execFile('python3', ['python_scripts/detect_eeg.py', duration, intensity], (error, stdout, stderr) => {
+  execFile('python3', ['python_scripts/detect_eeg.py', duration, mappedIntensity], (error, stdout, stderr) => {
     if (error) {
       console.error(`파이썬 스크립트 실행 오류: ${error.message}`);
       sessionResult = { error: '파이썬 스크립트 실행에 실패했습니다.' };
