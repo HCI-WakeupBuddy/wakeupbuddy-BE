@@ -29,7 +29,7 @@ app.use('/api/muse', museRoutes);
 app.use('/api/eeg', eegRoutes);
 
 // 그래프 파일 제공을 위한 정적 경로 설정
-app.use('/images', express.static(path.join(__dirname, 'python_scripts')));
+app.use('/images', express.static(path.join(__dirname, 'images')));
 
 // 서버 시작
 const PORT = process.env.PORT || 3000;

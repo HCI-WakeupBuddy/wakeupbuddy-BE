@@ -20,6 +20,31 @@ import subprocess
 import serial  # 아두이노 시리얼 통신을 위한 모듈
 import serial.tools.list_ports
 
+# 사용 가능한 포트에서 아두이노를 검색하는 함수
+def find_arduino_port():
+    ports = serial.tools.list_ports.comports()
+    for port in ports:
+        if 'Arduino' in port.description:
+            return port.device
+    return None
+
+# 메인 함수에서 아두이노 연결
+arduino_port = find_arduino_port()
+if arduino_port is None:
+    print("Arduino not found. Please check the connection.")
+    print("Available ports:")
+    ports = serial.tools.list_ports.comports()
+    for port in ports:
+        print(f"Port: {port.device}, Description: {port.description}")
+    sys.exit(1)
+
+try:
+    arduino = serial.Serial(arduino_port, 9600)
+    print(f"Arduino connected on port {arduino_port}")
+except serial.SerialException as e:
+    print(f"Failed to connect to Arduino on port {arduino_port}: {e}")
+    sys.exit(1)
+
 # 이벤트 객체 생성 (스레드 종료 신호)
 stop_event = threading.Event()
 
@@ -142,7 +167,7 @@ def visualize_drowsiness_trend(drowsy_events, awake_events):
     plt.gca().xaxis.set_major_formatter(DateFormatter('%H:%M:%S'))
     plt.xticks(rotation=45)
     plt.tight_layout()
-    plt.savefig("testt_drowsiness_trend_plot.png")
+    plt.savefig("drowsiness_trend_plot.png")
     plt.show()
 
 
@@ -155,6 +180,19 @@ def real_time_drowsiness_detection(thresholds, duration_minutes, vibration_inten
 
     start_time = time.time()
     end_time = start_time + duration_minutes * 60
+
+    # 아두이노 연결 확인
+    arduino_port = find_arduino_port()
+    arduino_connected = False
+    if arduino_port:
+        try:
+            arduino = serial.Serial(arduino_port, 9600)
+            arduino_connected = True
+            print(f"Arduino connected on port {arduino_port}")
+        except serial.SerialException as e:
+            print(f"Failed to connect to Arduino on port {arduino_port}: {e}")
+    else:
+        print("Arduino not found. Continuing without Arduino support.")
 
 
     while time.time() < end_time:
@@ -171,31 +209,26 @@ def real_time_drowsiness_detection(thresholds, duration_minutes, vibration_inten
             print(f"Drowsiness detected at {timestamp}")
             drowsy_events.append({"Timestamp": timestamp, "Theta/Alpha": theta_alpha, "Theta/Beta": theta_beta})
             vibration_count += 1
+            # 아두이노가 연결된 경우에만 진동 전달
+            if arduino_connected:
+                try:
+                    arduino.write(f"{vibration_intensity}\n".encode())
+                    print(f"Vibration command sent: {vibration_intensity}")
+                except serial.SerialException as e:
+                    print(f"Failed to send vibration command: {e}")
         else:
             print(f"Awake at {timestamp}")
             awake_events.append({"Timestamp": timestamp, "Theta/Alpha": theta_alpha, "Theta/Beta": theta_beta})
 
-    # 총 학습 시간, 졸음 시간, 각성 시간 계산
-    total_time = time.time() - start_time  # 총 실행 시간 (초)
-    total_drowsy_time = vibration_count * 5  # 진동 횟수 당 5초로 가정
-    total_awake_time = total_time - total_drowsy_time
-
     visualize_drowsiness_trend(drowsy_events, awake_events)
-
     result = {
         "totalVibrationCount": vibration_count,
-        "totalDrowsyTime": total_drowsy_time,
-        "totalTime": total_time,
-        "totalAwakeTime": total_awake_time,
-        "graphImageFilename": "drowsiness_detection_plot.png"  # 저장된 그래프 이미지 파일 이름
+        "totalDrowsyTime": vibration_count * 5,
+        "totalAwakeTime": (time.time() - start_time) - (vibration_count * 5)
     }
-    
-    print("JSON Result:")
-    print(json.dumps(result, indent=4))
-
-    with open("test_drowsiness_results.json", "w") as file:
+    with open("drowsiness_results.json", "w") as file:
         json.dump(result, file, indent=4)
-    print("Results saved to 'test_drowsiness_results.json'")
+    print("Results saved to 'drowsiness_results.json'")
 
 
 # 메인 함수

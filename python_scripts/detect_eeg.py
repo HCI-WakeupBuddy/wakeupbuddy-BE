@@ -17,6 +17,7 @@ import threading
 import subprocess
 import logging
 import serial  # 추가: 아두이노 시리얼 통신을 위한 모듈
+import requests
 
 
 # 이벤트 객체 생성 (스레드 종료 신호)
@@ -24,13 +25,13 @@ stop_event = threading.Event()
 
 # Muse 스트림 실행 함수
 def start_muse_stream():
-    print("Starting Muse stream as a subprocess...")
+    logging.info("Starting Muse stream as a subprocess...")
     process = subprocess.Popen(['muselsl', 'stream'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     return process
 
 # Muse 스트림 종료 함수
 def stop_muse_stream(process):
-    print("Stopping Muse stream...")
+    logging.info("Stopping Muse stream...")
     process.terminate()
     process.wait()
 
@@ -86,7 +87,7 @@ def extract_features(data):
 
 # EEG 데이터 수집 함수
 def collect_eeg_data(duration, sampling_rate=256):
-    print("Resolving EEG stream...")
+    logging.info("Resolving EEG stream...")
     try:
         streams = resolve_stream('type', 'EEG')
         if not streams:
@@ -97,7 +98,7 @@ def collect_eeg_data(duration, sampling_rate=256):
 
     inlet = StreamInlet(streams[0])
 
-    print("EEG stream resolved. Collecting data...")
+    logging.info("EEG stream resolved. Collecting data...")
     data_buffer = []
     start_time = time.time()
     while time.time() - start_time < duration:
@@ -121,10 +122,10 @@ def real_time_drowsiness_detection(thresholds, duration_minutes, sampling_rate=2
     end_time = start_time + duration_minutes * 60
 
     while time.time() < end_time:
-        print("Collecting EEG data for 5 seconds...")
+        logging.info("Collecting EEG data for 5 seconds...")
         eeg_data = collect_eeg_data(duration=5)
         if eeg_data is None or eeg_data.shape[0] == 0:
-            print("Failed to collect EEG data. Skipping this cycle.")
+            logging.error("Failed to collect EEG data. Skipping this cycle.")
             continue
 
         preprocessed_data = preprocess_eeg(eeg_data)
@@ -132,11 +133,11 @@ def real_time_drowsiness_detection(thresholds, duration_minutes, sampling_rate=2
 
         timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
         if theta_alpha > theta_alpha_threshold or theta_beta > theta_beta_threshold:
-            print(f"졸음이 감지되었습니다! 시간: {timestamp}")
+            logging.info(f"졸음이 감지되었습니다! 시간: {timestamp}")
             drowsy_events.append({"Timestamp": timestamp, "Theta/Alpha": theta_alpha, "Theta/Beta": theta_beta})
             vibration_count += 1  # 졸음이 감지되면 진동 횟수 증가
         else:
-            print(f"Awake at {timestamp}. Theta/Alpha: {theta_alpha:.2f}, Theta/Beta: {theta_beta:.2f}")
+            logging.info(f"Awake at {timestamp}. Theta/Alpha: {theta_alpha:.2f}, Theta/Beta: {theta_beta:.2f}")
             awake_events.append({"Timestamp": timestamp, "Theta/Alpha": theta_alpha, "Theta/Beta": theta_beta})
 
     total_time = time.time() - start_time  # 총 학습 시간 (초)
@@ -161,12 +162,12 @@ def save_and_visualize(drowsy_events, awake_events):
     if drowsy_events:
         drowsy_df = pd.DataFrame(drowsy_events)
         drowsy_df.to_csv("drowsy_log.csv", index=False)
-        print("Drowsy log saved to 'drowsy_log.csv'.")
+        logging.info("Drowsy log saved to 'drowsy_log.csv'.")
 
     if awake_events:
         awake_df = pd.DataFrame(awake_events)
         awake_df.to_csv("awake_log.csv", index=False)
-        print("Awake log saved to 'awake_log.csv'.")
+        logging.info("Awake log saved to 'awake_log.csv'.")
 
     visualize_results(drowsy_events, awake_events)
 
@@ -195,15 +196,15 @@ def visualize_results(drowsy_events, awake_events):
     plt.legend()
     plt.tight_layout()
 
-    image_filename = "drowsiness_detection_plot.png"
+    image_filename = "images/drowsiness_detection_plot.png"
     plt.savefig(image_filename)
-    print(f"Graph saved to '{image_filename}'.")
+    logging.info(f"Graph saved to '{image_filename}'.")
     plt.show()
 
 # 메인 함수 - 명령줄 인자를 통해 학습 시간과 진동 강도 전달 받음
 if __name__ == "__main__":
     if len(sys.argv) != 3:
-        print("Usage: python3 detect_eeg.py <duration_minutes> <vibration_intensity>")
+        logging.error("Usage: python3 detect_eeg.py <duration_minutes> <vibration_intensity>")
         sys.exit(1)
 
     duration_minutes = int(sys.argv[1])
@@ -219,10 +220,10 @@ if __name__ == "__main__":
         if 1 <= duration_minutes <= 60:
             real_time_drowsiness_detection(thresholds, duration_minutes=duration_minutes)
         else:
-            print("Please enter a valid duration between 1 and 60.")
+            logging.error("Please enter a valid duration between 1 and 60.")
     except RuntimeError as e:
-        print(f"Error: {e}")
+        logging.error(f"Error: {e}")
     finally:
         stop_event.set()
         stream_thread.join()
-        print("Stopping Muse stream...")
+        logging.info("Stopping Muse stream...")
