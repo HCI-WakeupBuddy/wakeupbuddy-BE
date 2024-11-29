@@ -10,6 +10,7 @@ const bodyParser = require('body-parser');
 const museRoutes = require('./routes/museRoutes');
 const eegRoutes = require('./routes/eegRoutes');
 const http = require('http');
+const fs = require('fs');
 
 
 // 환경변수 설정 파일 불러오기
@@ -28,7 +29,6 @@ app.use(bodyParser.json());
 app.use('/api/muse', museRoutes);
 app.use('/api/eeg', eegRoutes);
 
-// 그래프 파일 제공을 위한 정적 경로 설정
 // 그래프 파일 제공을 위한 정적 경로 설정
 app.use('/', express.static(path.join(__dirname)));
 

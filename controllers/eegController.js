@@ -2,6 +2,7 @@
 
 const { spawn } = require("child_process");
 const path = require("path");
+const fs = require("fs");
 
 let startTime = null;
 let vibrationCount = 0;
@@ -52,7 +53,11 @@ const startSession = (req, res) => {
       try {
         const parsedResult = JSON.parse(jsonString);
         sessionResult = {
-          ...parsedResult,
+          //...parsedResult,
+          totalVibrationCount: parsedResult.totalVibrationCount,
+          totalDrowsyTime: parsedResult.totalDrowsyTime,
+          totalTime: parsedResult.totalTime,
+          totalAwakeTime: parsedResult.totalAwakeTime,
           graphImageUrl:  `/${parsedResult.graphImageFilename}`,
         };
         console.log("Python 결과를 성공적으로 파싱했습니다:", sessionResult);
@@ -73,8 +78,23 @@ const startSession = (req, res) => {
       sessionStatus = "error";
       sessionResult = { error: "Python script failed to execute." };
     } else {
-      sessionStatus = "completed";
-      console.log("Python 프로세스 종료 후 결과:", sessionResult);
+      //sessionStatus = "completed";
+      //console.log("Python 프로세스 종료 후 결과:", sessionResult);
+      const jsonPath = path.join(__dirname, "python_scripts", "drowsiness_result.json");
+      if (fs.existsSync(jsonPath)) {
+        try {
+          const resultData = fs.readFileSync(jsonPath, "utf8");
+          sessionResult = JSON.parse(resultData);
+          sessionStatus = "completed";
+          console.log("Python 프로세스 종료 후 결과:", sessionResult);
+      } catch (error) {
+        console.error("JSON 파일 읽기 중 오류:", error.message);
+        sessionStatus = "error";
+      }
+    } else {
+      console.error("JSON 파일이 생성되지 않았습니다.");
+      sessionStatus = "error";
+    }
     }
   });
 
