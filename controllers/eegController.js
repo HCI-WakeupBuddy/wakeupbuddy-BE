@@ -63,8 +63,10 @@ const startSession = (req, res) => {
         };
         console.log("Python 결과를 성공적으로 파싱했습니다:", sessionResult);
         resultData = "";
+        //sessionStatus = "completed";
       } catch (error) {
         console.error("JSON 파싱 중 오류:", error.message);
+        sessionStatus = "error"; // 상태 업데이트
       }
     }
   });
@@ -80,28 +82,20 @@ const startSession = (req, res) => {
       console.error(`Python process exited with code ${code}`);
       sessionStatus = "error";
       sessionResult = { error: "Python script failed to execute." };
-    } else {
-      //sessionStatus = "completed";
-      //console.log("Python 프로세스 종료 후 결과:", sessionResult);
-      const jsonPath = path.join(__dirname, "python_scripts", "drowsiness_result.json");
-      if (fs.existsSync(jsonPath)) {
-        try {
-          const resultData = fs.readFileSync(jsonPath, "utf8");
-          sessionResult = JSON.parse(resultData);
-          sessionStatus = "completed";
-          console.log("Python 프로세스 종료 후 결과:", sessionResult);
-      } catch (error) {
-        console.error("JSON 파일 읽기 중 오류:", error.message);
-        sessionStatus = "error";
-      }
+      return;
+    } 
+    // Python이 정상적으로 종료된 경우
+    if (sessionResult) {
+      console.log("Python 프로세스에서 결과가 성공적으로 처리되었습니다.");
+      sessionStatus = "completed"; // stdout 데이터 기준으로 처리 완료
     } else {
       console.error("JSON 파일이 생성되지 않았습니다.");
       sessionStatus = "error";
+      sessionResult = { error: "Result JSON file is missing." };
     }
-    }
+    
   });
 
-  res.status(200).json({ message: "학습 세션이 시작되었습니다. 결과는 나중에 조회할 수 있습니다." });
 };
 
 // 학습 결과 가져오기 API
