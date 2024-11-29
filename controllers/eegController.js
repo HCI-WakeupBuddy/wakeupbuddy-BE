@@ -1,10 +1,8 @@
-//eegController.js
-//EEG 데이터 처리 로직
-//EEG 데이터 수집과 학습 세션 시작/종료와 같은 로직을 정의
-
+// eegController.js
+const { execFile } = require('child_process');
 let startTime = null;
 let vibrationCount = 0;
-let totalDrowsyTime = 0; 
+let totalDrowsyTime = 0;
 
 const startSession = (req, res) => {
   const { duration, intensity } = req.body;
@@ -19,7 +17,22 @@ const startSession = (req, res) => {
   totalDrowsyTime = 0;
 
   console.log(`학습 세션 시작 - 시간: ${duration}분, 진동 강도: ${intensity}`);
-  res.status(200).json({ message: '학습 세션이 시작되었습니다.', duration, intensity });
+
+  // detect_eeg.py 파일 실행 및 학습 시간과 진동 강도 전달
+  execFile('python3', ['detect_eeg.py', duration, intensity], (error, stdout, stderr) => {
+    if (error) {
+      console.error(`파이썬 스크립트 실행 오류: ${error.message}`);
+      return res.status(500).json({ error: '파이썬 스크립트 실행에 실패했습니다.' });
+    }
+
+    if (stderr) {
+      console.error(`파이썬 스크립트 오류 메시지: ${stderr}`);
+      return res.status(500).json({ error: '파이썬 스크립트에서 오류가 발생했습니다.' });
+    }
+
+    console.log(`파이썬 스크립트 출력: ${stdout}`);
+    res.status(200).json({ message: '학습 세션이 시작되었습니다.', duration, intensity });
+  });
 };
 
 const endSession = (req, res) => {
@@ -45,7 +58,6 @@ const receiveEegData = (req, res) => {
 
   // EEG 데이터를 수신하고 분석하는 로직은 추가 구현 필요
 
-  // 현재는 데이터 수신 성공 여부만 응답
   res.status(200).json({ message: 'EEG 데이터가 성공적으로 수신되었습니다.' });
 };
 

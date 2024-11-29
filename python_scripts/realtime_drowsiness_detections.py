@@ -1,5 +1,5 @@
 # realtime_drowsiness_detections.py
-# 3. 실시간 졸음 탐지 - 실행 중 졸음 탐지와 로그 파일 저장 확인.
+# 실시간 졸음 탐지 - 실행 중 졸음 탐지와 로그 파일 저장 확인.
 
 import numpy as np
 from muselsl import list_muses
@@ -15,6 +15,23 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import logging
 import serial  # 아두이노 시리얼 통신을 위한 모듈
+import requests #백 연동
+
+def send_muse_status_to_backend(is_worn):
+    try:
+        response = requests.post('http://localhost:3000/api/muse/muse-status', json={'status': is_worn})
+        if response.status_code == 200:
+            print(f"착용 상태 업데이트: {'정상 착용' if is_worn else '착용 안 됨'}")
+        else:
+            print(f"착용 상태 업데이트 실패. 상태 코드: {response.status_code}")
+    except Exception as e:
+        print(f"착용 상태 전송 중 오류 발생: {e}")
+
+    # 착용 상태 콘솔 출력 (Node.js에서 확인 가능)
+    if is_worn:
+        print("정상 착용")
+    else:
+        print("착용 안 됨")
 
 # Arduino 시리얼 포트 연결 설정
 arduino_port = "/dev/ttyACM0"  # Linux 또는 macOS: /dev/ttyACM0, Windows: COM3 등
@@ -116,6 +133,7 @@ def send_vibration_command(intensity):
     else:
         print("시리얼 포트가 열려 있지 않습니다.")
 
+
 # EEG 데이터 수집 함수
 def collect_eeg_data(duration, sampling_rate=256):
     print("Resolving EEG stream...")
@@ -171,7 +189,7 @@ def real_time_drowsiness_detection(thresholds, duration_minutes, sampling_rate=2
             drowsy_events.append({"Timestamp": timestamp, "Theta/Alpha": theta_alpha, "Theta/Beta": theta_beta})
              
             # 졸음 감지 시 진동 모듈 신호 전송
-            send_vibration_command(vibration_intensity)  # 강한 진동으로 설정 (필요시 '중' 또는 '약'으로 변경 가능)
+            send_vibration_command(intensity)  # 강한 진동으로 설정 (필요시 '중' 또는 '약'으로 변경 가능)
 
         else:
             print(f"Awake at {timestamp}. Theta/Alpha: {theta_alpha:.2f}, Theta/Beta: {theta_beta:.2f}")

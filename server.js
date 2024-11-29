@@ -41,15 +41,6 @@ let startTime = null;
 
 io.on('connection', (socket) => {
   console.log('프론트엔드와 연결되었습니다.');
-
-  // 학습 세션 중 시간 업데이트
-  setInterval(() => {
-    if (startTime) {
-      const currentTime = new Date();
-      const elapsedTime = Math.floor((currentTime - startTime) / 1000); // 초 단위 경과 시간
-      socket.emit('time-update', { elapsedTime });
-    }
-  }, 1000); // 1초마다 업데이트
 });
 
 // 학습 세션 시작 API

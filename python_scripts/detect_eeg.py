@@ -1,17 +1,20 @@
+#detect_eeg.py
+#실시간 졸음 탐지 및 백엔드 연결
+
+import sys
+import time
 import numpy as np
+import pandas as pd
+import json
+import matplotlib.pyplot as plt
 from muselsl import list_muses
 from pylsl import StreamInlet, resolve_stream
 from scipy.signal import butter, filtfilt, detrend
 from mne.preprocessing import ICA
 from mne import create_info, EpochsArray
-from mne.time_frequency import psd_array_multitaper
-import subprocess
 import threading
-import time
-import pandas as pd
-import matplotlib.pyplot as plt
-import logging
-import requests
+import subprocess
+
 
 # 이벤트 객체 생성 (스레드 종료 신호)
 stop_event = threading.Event()
@@ -27,6 +30,9 @@ def stop_muse_stream(process):
     print("Stopping Muse stream...")
     process.terminate()
     process.wait()
+
+# Muse 스트림을 시작하는 스레드 생성
+stream_thread = None
 
 # 밴드패스 필터
 def butter_bandpass(lowcut, highcut, fs, order=5):
@@ -59,21 +65,17 @@ def preprocess_eeg(data, sampling_rate=256):
 
 # 특징 추출 함수 (Theta/Alpha, Theta/Beta 비율 계산)
 def extract_features(data):
-    # 데이터는 각 채널(TP9, AF7, AF8, TP10)의 신호가 열로 구성된 데이터프레임
     freq_bands = {"Theta": (4, 8), "Alpha": (8, 12), "Beta": (13, 30)}
     sampling_rate = 256
 
-    # FFT를 통해 주파수 스펙트럼 계산
     fft_data = np.fft.rfft(data, axis=0)
     freqs = np.fft.rfftfreq(len(data), d=1 / sampling_rate)
 
-    # 각 주파수 대역의 파워 계산
     band_powers = {
         band: np.sum(np.abs(fft_data[(freqs >= low) & (freqs < high)])**2, axis=0)
         for band, (low, high) in freq_bands.items()
     }
 
-    # Theta/Alpha 및 Theta/Beta 비율 계산
     theta_alpha_ratio = band_powers["Theta"] / band_powers["Alpha"]
     theta_beta_ratio = band_powers["Theta"] / band_powers["Beta"]
 
@@ -81,49 +83,39 @@ def extract_features(data):
 
 # EEG 데이터 수집 함수
 def collect_eeg_data(duration, sampling_rate=256):
+    print("Resolving EEG stream...")
     try:
-        print("Resolving EEG stream...")
         streams = resolve_stream('type', 'EEG')
         if not streams:
             raise RuntimeError("No EEG streams found. Please ensure Muse is streaming.")
-        inlet = StreamInlet(streams[0])
-
-        print("EEG stream resolved. Collecting data...")
-        data_buffer = []
-        start_time = time.time()
-        while time.time() - start_time < duration:
-            eeg_data, _ = inlet.pull_sample(timeout=1.0)
-            if eeg_data:
-                data_buffer.append(eeg_data[:4])
-            else:
-                print("No data received during this cycle.")
-            time.sleep(1 / sampling_rate)
-
-        return np.array(data_buffer)
-    except Exception as e:
-        print(f"Error during data collection: {e}")
+    except RuntimeError as e:
+        print(f"Error: {e}")
         return None
 
-# 진동 모듈 트리거 함수
-def trigger_vibration(intensity):
-    try:
-        response = requests.post('http://localhost:3000/api/arduino/trigger-vibration', json={"intensity": intensity})
-        if response.status_code == 200:
-            print("진동 모듈이 정상적으로 작동하였습니다.")
-        else:
-            print(f"진동 모듈 요청 실패: {response.status_code}")
-    except requests.exceptions.RequestException as e:
-        print(f"진동 모듈 요청 오류: {e}")
+    inlet = StreamInlet(streams[0])
 
-# 실시간 졸음 탐지
-def real_time_drowsiness_detection(thresholds, duration_minutes=60, sampling_rate=256):
+    print("EEG stream resolved. Collecting data...")
+    data_buffer = []
+    start_time = time.time()
+    while time.time() - start_time < duration:
+        eeg_data, _ = inlet.pull_sample(timeout=1.0)
+        if eeg_data:
+            data_buffer.append(eeg_data[:4])  # AUX 채널 제외
+        else:
+            print("No data received during this cycle.")
+        time.sleep(1 / sampling_rate)
+
+    return np.array(data_buffer)
+
+# 실시간 졸음 탐지 (진동 횟수 및 졸음 시간 계산 포함)
+def real_time_drowsiness_detection(thresholds, duration_minutes, sampling_rate=256):
     theta_alpha_threshold, theta_beta_threshold = thresholds
     drowsy_events = []
     awake_events = []
+    vibration_count = 0  # 진동 횟수 카운트 변수
 
     start_time = time.time()
     end_time = start_time + duration_minutes * 60
-    print(f"Starting real-time drowsiness detection for {duration_minutes} minutes...")
 
     while time.time() < end_time:
         print("Collecting EEG data for 5 seconds...")
@@ -133,23 +125,30 @@ def real_time_drowsiness_detection(thresholds, duration_minutes=60, sampling_rat
             continue
 
         preprocessed_data = preprocess_eeg(eeg_data)
-
-        # 특징 추출
         theta_alpha, theta_beta = extract_features(preprocessed_data)
 
-        # 졸음 판별
         timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
         if theta_alpha > theta_alpha_threshold or theta_beta > theta_beta_threshold:
             print(f"졸음이 감지되었습니다! 시간: {timestamp}")
             drowsy_events.append({"Timestamp": timestamp, "Theta/Alpha": theta_alpha, "Theta/Beta": theta_beta})
-
-            # 졸음 감지 시 진동 모듈 작동 요청
-            trigger_vibration('강')
+            vibration_count += 1  # 졸음이 감지되면 진동 횟수 증가
         else:
             print(f"Awake at {timestamp}. Theta/Alpha: {theta_alpha:.2f}, Theta/Beta: {theta_beta:.2f}")
             awake_events.append({"Timestamp": timestamp, "Theta/Alpha": theta_alpha, "Theta/Beta": theta_beta})
 
+    total_time = time.time() - start_time  # 총 학습 시간 (초)
+    total_drowsy_time = vibration_count * 5  # 진동 횟수 당 5초로 가정
+
     save_and_visualize(drowsy_events, awake_events)
+
+    # JSON 형식으로 결과 출력
+    result = {
+        "totalVibrationCount": vibration_count,
+        "totalDrowsyTime": total_drowsy_time,
+        "totalTime": total_time
+    }
+    print(json.dumps(result))
+
 
 # 결과 저장 및 시각화
 def save_and_visualize(drowsy_events, awake_events):
@@ -165,7 +164,7 @@ def save_and_visualize(drowsy_events, awake_events):
 
     visualize_results(drowsy_events, awake_events)
 
-# 시각화
+# 시각화 (+이미지 저장)
 def visualize_results(drowsy_events, awake_events):
     plt.figure(figsize=(14, 7))
 
@@ -189,41 +188,35 @@ def visualize_results(drowsy_events, awake_events):
     plt.title("Real-Time Drowsiness Detection")
     plt.legend()
     plt.tight_layout()
+
+    image_filename = "drowsiness_detection_plot.png"
+    plt.savefig(image_filename)
+    print(f"Graph saved to '{image_filename}'.")
     plt.show()
 
-# 메인 함수
-def main():
-    thresholds = (3.50, 3.08)  # 사용자 맞춤 임곗값
+# 메인 함수 - 명령줄 인자를 통해 학습 시간과 진동 강도 전달 받음
+if __name__ == "__main__":
+    if len(sys.argv) != 3:
+        print("Usage: python3 detect_eeg.py <duration_minutes> <vibration_intensity>")
+        sys.exit(1)
 
-    muses = list_muses()
-    if not muses:
-        print("No Muse devices found. Please connect a Muse device.")
-        return
+    duration_minutes = int(sys.argv[1])
+    vibration_intensity = int(sys.argv[2])
 
-    muse_id = muses[0]['address']
-    print(f"Connecting to Muse: {muse_id}")
-    
+    thresholds = (3.50, 3.08)  # 사용자 맞춤 임곗값  (Theta/Alpha, Theta/Beta)
+
     stream_thread = threading.Thread(target=start_muse_stream)
     stream_thread.start()
     time.sleep(2)
 
     try:
-        duration_minutes = int(input("Enter detection duration in minutes (max 60): "))
         if 1 <= duration_minutes <= 60:
             real_time_drowsiness_detection(thresholds, duration_minutes=duration_minutes)
         else:
             print("Please enter a valid duration between 1 and 60.")
-    except ValueError:
-        print("Invalid input. Please enter a number.")
     except RuntimeError as e:
         print(f"Error: {e}")
     finally:
-        # 스레드 종료 신호 설정
         stop_event.set()
         stream_thread.join()
         print("Stopping Muse stream...")
-
-if __name__ == "__main__":
-    # Pylsl 네트워크 로그 억제
-    logging.getLogger('pylsl').setLevel(logging.ERROR)
-    main()
