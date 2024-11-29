@@ -18,7 +18,17 @@ import subprocess
 import logging
 import serial  # 추가: 아두이노 시리얼 통신을 위한 모듈
 import requests
+import os
 
+# 로그 파일 설정
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[
+        logging.FileHandler("drowsiness_detection.log"),  # 로그 파일 저장
+        logging.StreamHandler()  # 콘솔 출력
+    ]
+)
 
 # 이벤트 객체 생성 (스레드 종료 신호)
 stop_event = threading.Event()
@@ -140,7 +150,8 @@ def real_time_drowsiness_detection(thresholds, duration_minutes, sampling_rate=2
             logging.info(f"Awake at {timestamp}. Theta/Alpha: {theta_alpha:.2f}, Theta/Beta: {theta_beta:.2f}")
             awake_events.append({"Timestamp": timestamp, "Theta/Alpha": theta_alpha, "Theta/Beta": theta_beta})
 
-    total_time = time.time() - start_time  # 총 학습 시간 (초)
+    #total_time = time.time() - start_time  # 총 학습 시간 (초)
+    total_time = duration_minutes * 60
     total_drowsy_time = vibration_count * 5  # 진동 횟수 당 5초로 가정
     total_awake_time = total_time - total_drowsy_time  # 집중한 시간
 
@@ -155,6 +166,12 @@ def real_time_drowsiness_detection(thresholds, duration_minutes, sampling_rate=2
         "graphImageFilename": "drowsiness_detection_plot.png"  # 저장된 그래프 이미지 파일 이름
     }
     print(json.dumps(result))
+    logging.info(f"Detection result: {json.dumps(result)}")  # 로그 파일에 기록
+
+    # 결과를 JSON 파일로 저장
+    with open("drowsiness_result.json", "w") as json_file:
+        json.dump(result, json_file, indent=4)
+    logging.info("Results saved to 'drowsiness_result.json'.")
 
 
 # 결과 저장 및 시각화
