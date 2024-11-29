@@ -21,7 +21,9 @@ const checkMuseStatus = (req, res) => {
       museStatus = false;
     }
 
-    res.status(200).json({ message: `Muse2 착용 상태: ${museStatus ? '정상 착용' : '착용 안 됨'}` });
+    res.status(200).json({ message: `Muse2 착용 상태: ${museStatus ? '정상 착용' : '착용 안 됨'}`,
+      status: museStatus, // Boolean 값 추가
+    });
   });
 
   pythonProcess.stderr.on('data', (data) => {
