@@ -12,10 +12,11 @@ const startSession = (req, res) => {
   
   // 진동 강도 매핑
   const intensityMapping = {
-    "level 1": 50,
-    "level 2": 150,
-    "level 3": 255
+    "level1": 50,
+    "level2": 150,
+    "level3": 255
   };
+  
   const mappedIntensity = intensityMapping[intensity]; // 진동 강도를 숫자로 변환
 
   // 학습 시간과 진동 강도 유효성 검사
