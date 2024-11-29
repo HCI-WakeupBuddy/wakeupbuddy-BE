@@ -28,14 +28,6 @@ app.use(bodyParser.json());
 app.use('/api/muse', museRoutes);
 app.use('/api/eeg', eegRoutes);
 
-// Socket.io 설정
-const server = http.createServer(app);
-const io = socketIo(server);
-
-io.on('connection', (socket) => {
-  console.log('프론트엔드와 연결되었습니다.');
-});
-
 // 그래프 파일 제공을 위한 정적 경로 설정
 app.use('/images', express.static(path.join(__dirname, 'python_scripts')));
 
