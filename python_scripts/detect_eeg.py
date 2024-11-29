@@ -196,7 +196,7 @@ def visualize_results(drowsy_events, awake_events):
     plt.legend()
     plt.tight_layout()
 
-    image_filename = "images/drowsiness_detection_plot.png"
+    image_filename = "/images/drowsiness_detection_plot.png"
     plt.savefig(image_filename)
     logging.info(f"Graph saved to '{image_filename}'.")
     plt.show()
