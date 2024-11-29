@@ -5,13 +5,16 @@ const { spawn } = require('child_process');
 let museStatus = false;
 
 const checkMuseStatus = (req, res) => {
-  const pythonProcess = spawn('python3', ['muse_status_checker.py']); // Python 스크립트 실행
+  const pythonProcess = spawn('python3', ['check_muse_status.py']); // Python 스크립트 실행
 
+  let output = '';
   pythonProcess.stdout.on('data', (data) => {
-    const output = data.toString();
+    output += data.toString();
+  });
+
+  pythonProcess.stdout.on('end', () => {
     console.log(`Python 출력: ${output}`);
 
-    // Python 스크립트가 착용 상태를 전달하는 부분을 기반으로 상태 업데이트
     if (output.includes('정상 착용')) {
       museStatus = true;
     } else if (output.includes('착용 안 됨')) {
@@ -23,6 +26,7 @@ const checkMuseStatus = (req, res) => {
 
   pythonProcess.stderr.on('data', (data) => {
     console.error(`Python 오류: ${data}`);
+    res.status(500).json({ error: `Python 오류: ${data.toString()}` });
   });
 
   pythonProcess.on('close', (code) => {
@@ -30,12 +34,6 @@ const checkMuseStatus = (req, res) => {
   });
 };
 
-// Muse 착용 상태를 반환하는 함수
-const getMuseStatus = (req, res) => {
-  res.status(200).json({ status: museStatus, message: museStatus ? '정상 착용' : '착용 안 됨' });
-};
-
 module.exports = {
-  checkMuseStatus,
-  getMuseStatus,
+  checkMuseStatus
 };

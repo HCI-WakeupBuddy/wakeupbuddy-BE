@@ -10,7 +10,7 @@ const bodyParser = require('body-parser');
 const museRoutes = require('./routes/museRoutes');
 const eegRoutes = require('./routes/eegRoutes');
 const http = require('http');
-const socketIo = require('socket.io');
+
 
 // 환경변수 설정 파일 불러오기
 dotenv.config();
@@ -35,10 +35,6 @@ const io = socketIo(server);
 io.on('connection', (socket) => {
   console.log('프론트엔드와 연결되었습니다.');
 });
-
-// eegController.js와 socket 연결 설정
-const eegController = require('./controllers/eegController');
-eegController.setSocket(io);  // eegController에서 Socket.IO를 설정하도록 함
 
 // 그래프 파일 제공을 위한 정적 경로 설정
 app.use('/images', express.static(path.join(__dirname, 'python_scripts')));

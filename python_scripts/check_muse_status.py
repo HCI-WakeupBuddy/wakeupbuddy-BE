@@ -11,4 +11,7 @@ def check_muse_status():
 
 if __name__ == "__main__":
     status = check_muse_status()
-    print("Muse 착용 상태:", "착용됨" if status else "착용되지 않음")
+    if status:
+        print("정상 착용")
+    else:
+        print("착용 안 됨")
