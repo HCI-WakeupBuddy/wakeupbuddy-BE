@@ -59,6 +59,7 @@ const startSession = (req, res) => {
           totalTime: parsedResult.totalTime,
           totalAwakeTime: parsedResult.totalAwakeTime,
           graphImageUrl:  `/${parsedResult.graphImageFilename}`,
+          jsonFileUrl: `/${parsedResult.jsonFilename}` // JSON 파일 URL 추가
         };
         console.log("Python 결과를 성공적으로 파싱했습니다:", sessionResult);
         resultData = "";
@@ -70,6 +71,8 @@ const startSession = (req, res) => {
 
   pythonProcess.stderr.on("data", (error) => {
     console.error(`Python stderr: ${error.toString()}`);
+    sessionStatus = "error";
+    sessionResult = { error: `Python script error: ${error.toString()}` };
   });
 
   pythonProcess.on("close", (code) => {

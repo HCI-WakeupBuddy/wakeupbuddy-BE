@@ -157,19 +157,30 @@ def real_time_drowsiness_detection(thresholds, duration_minutes, sampling_rate=2
 
     save_and_visualize(drowsy_events, awake_events)
 
+    # JSON 파일 저장 경로 설정
+    timestamp = time.strftime("%Y%m%d_%H%M%S", time.localtime())  # 실행 시점의 타임스탬프 추가
+    json_filename = f"drowsiness_result_{timestamp}.json"  # 고유한 파일 이름 생성
+    json_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), json_filename)
+
+
+
     # JSON 형식으로 결과 출력
     result = {
         "totalVibrationCount": vibration_count,
         "totalDrowsyTime": total_drowsy_time,
         "totalTime": total_time,
         "totalAwakeTime": total_awake_time,
-        "graphImageFilename": "drowsiness_detection_plot.png"  # 저장된 그래프 이미지 파일 이름
+        "graphImageFilename": "drowsiness_detection_plot.png",  # 저장된 그래프 이미지 파일 이름
+        "jsonFilename": json_filename
     }
     print(json.dumps(result))
+    
+    # JSON 파일 저장 직전 로그 추가
+    logging.info(f"Saving JSON file to: {json_path}")
     logging.info(f"Detection result: {json.dumps(result)}")  # 로그 파일에 기록
 
     # 결과를 JSON 파일로 저장
-    with open("drowsiness_result.json", "w") as json_file:
+    with open(json_path, "w") as json_file:
         json.dump(result, json_file, indent=4)
     logging.info("Results saved to 'drowsiness_result.json'.")
 
