@@ -1,6 +1,7 @@
-#detect_eeg.py
+#test.py
 #실시간 졸음 탐지 및 백엔드 연결
 
+from email import message
 import sys
 import time
 import numpy as np
@@ -19,6 +20,29 @@ import logging
 import serial  # 추가: 아두이노 시리얼 통신을 위한 모듈
 import requests
 import os
+
+
+# Arduino 연결 설정
+arduino_port = 'COM3'  # 아두이노가 연결된 포트 (Windows는 COMx, Linux/Mac은 /dev/ttyACM0와 유사)
+baud_rate = 115200
+
+# Arduino 시리얼 연결
+try:
+    arduino = serial.Serial(arduino_port, baud_rate, timeout=1)
+    logging.info(f"Arduino connected on port {arduino_port}")
+except serial.SerialException as e:
+    logging.error(f"Could not connect to Arduino: {e}")
+    arduino = None
+
+def send_to_arduino(signal, intensity):
+    if arduino:
+        try:
+            # 신호와 진동 강도를 전송
+            message = f"{signal},{intensity}\n"
+            arduino.write(message.encode())
+            logging.info(f"Sent to Arduino: {message.strip()}")
+        except Exception as e:
+            logging.error(f"Failed to send data to Arduino: {e}")
 
 # 로그 파일 설정
 logging.basicConfig(
@@ -146,9 +170,12 @@ def real_time_drowsiness_detection(thresholds, duration_minutes, sampling_rate=2
             logging.info(f"졸음이 감지되었습니다! 시간: {timestamp}")
             drowsy_events.append({"Timestamp": timestamp, "Theta/Alpha": theta_alpha, "Theta/Beta": theta_beta})
             vibration_count += 1  # 졸음이 감지되면 진동 횟수 증가
+            send_to_arduino('1', vibration_intensity)  # 진동 신호와 강도를 아두이노로 전송
+            logging.info(f"Data sent to Arduino at {time.time()}.")
         else:
             logging.info(f"Awake at {timestamp}. Theta/Alpha: {theta_alpha:.2f}, Theta/Beta: {theta_beta:.2f}")
             awake_events.append({"Timestamp": timestamp, "Theta/Alpha": theta_alpha, "Theta/Beta": theta_beta})
+            send_to_arduino('0', 0)  # 졸음이 감지되지 않으면 진동을 끔
 
     #total_time = time.time() - start_time  # 총 학습 시간 (초)
     total_time = duration_minutes * 60

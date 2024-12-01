@@ -1,4 +1,4 @@
-#detect_eeg.py
+#test.py
 #실시간 졸음 탐지 및 백엔드 연결
 
 from email import message
