@@ -1,8 +1,0 @@
-{
-    "totalVibrationCount": 7,
-    "totalDrowsyTime": 35,
-    "totalTime": 60,
-    "totalAwakeTime": 25,
-    "graphImageFilename": "drowsiness_detection_plot.png",
-    "jsonFilename": "drowsiness_result_20241130_063553.json"
-}

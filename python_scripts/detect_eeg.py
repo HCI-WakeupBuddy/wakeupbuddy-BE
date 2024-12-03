@@ -1,5 +1,5 @@
-#test.py
-#실시간 졸음 탐지 및 백엔드 연결
+#detect_eeg.py
+#실시간 졸음 탐지 및 아두이노 연동
 
 from email import message
 import sys
@@ -183,8 +183,7 @@ def real_time_drowsiness_detection(thresholds, duration_minutes, sampling_rate=2
     total_awake_time = total_time - total_drowsy_time  # 집중한 시간
 
     save_and_visualize(drowsy_events, awake_events)
-
-    # JSON 파일 저장 경로 설정
+    
     timestamp = time.strftime("%Y%m%d_%H%M%S", time.localtime())  # 실행 시점의 타임스탬프 추가
     json_filename = f"drowsiness_result_{timestamp}.json"  # 고유한 파일 이름 생성
     json_path = os.path.join(os.path.abspath(os.path.dirname(__file__)), json_filename)

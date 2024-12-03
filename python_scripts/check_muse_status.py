@@ -1,4 +1,5 @@
 #check_muse_status.py
+#muse2 착용 상태 확인 
 
 from muselsl import list_muses
 import sys

@@ -1,6 +1,5 @@
 //eegRoutes.js
 //EEG 데이터 처리 관련 라우트 파일
-//eegController.js에 정의된 함수들을 API 엔드포인트로 연결
 
 const express = require('express');
 const { startSession, endSession, getSessionResult } = require('../controllers/eegController');

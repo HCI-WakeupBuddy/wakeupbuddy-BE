@@ -1,4 +1,6 @@
 //eegController.js
+//프론트로부터 학습시간, 진동세기 받아와 뇌파 측정 파이썬 코드 실행
+//학습결과 데이터 반환
 
 const { spawn } = require("child_process");
 const path = require("path");

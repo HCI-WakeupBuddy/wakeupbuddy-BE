@@ -1,3 +1,6 @@
+//museController.js
+//프론트에게 muse 착용 상태 전달 (T/F)
+
 const { spawn } = require("child_process");
 let museStatus = false;
 
