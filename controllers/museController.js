@@ -2,7 +2,7 @@ const { spawn } = require("child_process");
 let museStatus = false;
 
 const checkMuseStatus = (req, res) => {
-  const pythonProcess = spawn("python3", [
+  const pythonProcess = spawn("python", [
     "python_scripts/check_muse_status.py",
   ]); // Python 경로 수정
 

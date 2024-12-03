@@ -36,7 +36,7 @@ const startSession = (req, res) => {
 
   console.log(`학습 세션 시작 - 시간: ${duration}분, 진동 강도: ${intensity}`);
 
-  const pythonProcess = spawn("python3", [
+  const pythonProcess = spawn("python", [
     "python_scripts/detect_eeg.py",
     duration,
     mappedIntensity,
