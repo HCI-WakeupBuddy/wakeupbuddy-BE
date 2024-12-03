@@ -20,7 +20,7 @@ import logging
 import serial  # 추가: 아두이노 시리얼 통신을 위한 모듈
 import requests
 import os
-
+from datetime import datetime 
 
 # Arduino 연결 설정
 arduino_port = 'COM3'  # 아두이노가 연결된 포트 (Windows는 COMx, Linux/Mac은 /dev/ttyACM0와 유사)
@@ -226,28 +226,51 @@ def save_and_visualize(drowsy_events, awake_events):
 
     visualize_results(drowsy_events, awake_events)
 
-# 시각화 (+이미지 저장)
+#데이터 시각화 
 def visualize_results(drowsy_events, awake_events):
     plt.figure(figsize=(14, 7))
+    theta_alpha_threshold, theta_beta_threshold = thresholds
 
     if drowsy_events:
-        drowsy_timestamps = [event["Timestamp"] for event in drowsy_events]
+        # 타임스탬프에서 시간만 추출
+        drowsy_timestamps = [
+            datetime.strptime(event["Timestamp"], "%Y-%m-%d %H:%M:%S").strftime("%H:%M:%S")
+            for event in drowsy_events
+        ]
         drowsy_theta_alpha = [event["Theta/Alpha"] for event in drowsy_events]
         drowsy_theta_beta = [event["Theta/Beta"] for event in drowsy_events]
         plt.scatter(drowsy_timestamps, drowsy_theta_alpha, color='red', label='Drowsy Theta/Alpha', alpha=0.7)
         plt.scatter(drowsy_timestamps, drowsy_theta_beta, color='darkred', label='Drowsy Theta/Beta', alpha=0.7)
 
     if awake_events:
-        awake_timestamps = [event["Timestamp"] for event in awake_events]
+        # 타임스탬프에서 시간만 추출
+        awake_timestamps = [
+            datetime.strptime(event["Timestamp"], "%Y-%m-%d %H:%M:%S").strftime("%H:%M:%S")
+            for event in awake_events
+        ]
         awake_theta_alpha = [event["Theta/Alpha"] for event in awake_events]
         awake_theta_beta = [event["Theta/Beta"] for event in awake_events]
         plt.scatter(awake_timestamps, awake_theta_alpha, color='blue', label='Awake Theta/Alpha', alpha=0.7)
         plt.scatter(awake_timestamps, awake_theta_beta, color='darkblue', label='Awake Theta/Beta', alpha=0.7)
 
-    plt.xticks(rotation=45)
     plt.xlabel("Timestamp")
+
+    if drowsy_events:
+        plt.gca().set_xticks(range(len(drowsy_events)))
+        plt.gca().set_xticklabels(
+            [event["Timestamp"] for event in drowsy_events],
+            rotation=45
+        )
+    else:
+        plt.gca().set_xticks([])
+
+    # 임곗값 선 추가
+    plt.axhline(y=theta_alpha_threshold, color='orange', linestyle='--', label='Theta/Alpha Threshold')
+    plt.axhline(y=theta_beta_threshold, color='purple', linestyle='--', label='Theta/Beta Threshold')
+
+    plt.xlabel("Drowsiness detected time")
     plt.ylabel("Ratio")
-    plt.title("Real-Time Drowsiness Detection")
+    plt.title("Realtime Drowsiness Detection")
     plt.legend()
     plt.tight_layout()
 
@@ -255,6 +278,7 @@ def visualize_results(drowsy_events, awake_events):
     plt.savefig(image_filename)
     logging.info(f"Graph saved to '{image_filename}'.")
     plt.show()
+
 
 # 메인 함수 - 명령줄 인자를 통해 학습 시간과 진동 강도 전달 받음
 if __name__ == "__main__":
@@ -265,7 +289,7 @@ if __name__ == "__main__":
     duration_minutes = int(sys.argv[1])
     vibration_intensity = int(sys.argv[2])
 
-    thresholds = (3.50, 3.08)  # 사용자 맞춤 임곗값  (Theta/Alpha, Theta/Beta)
+    thresholds = (1.61, 1.55)  # 사용자 맞춤 임곗값  (Theta/Alpha, Theta/Beta)
 
     stream_thread = threading.Thread(target=start_muse_stream)
     stream_thread.start()

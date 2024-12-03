@@ -1,6 +1,9 @@
 #check_muse_status.py
 
 from muselsl import list_muses
+import sys
+sys.stdout.reconfigure(encoding="utf-8")
+
 
 def check_muse_status():
     """Muse 착용 상태를 확인하는 함수"""
