@@ -1,3 +1,8 @@
+## HCI-WakeupBuddy
+
+백엔드 레포지토리입니다.
+
+<br/>
 
 ![HCI개론  Readme 뇌파안에갇힌셋의 사본](https://github.com/user-attachments/assets/f3491ca6-04b6-401d-86c9-2da50a02e854)
 
